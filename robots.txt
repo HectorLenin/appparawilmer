@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://appparawilmer.vercel.app/sitemap.xml
