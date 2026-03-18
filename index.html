@@ -21,7 +21,6 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0f1a0f; color: #e8e8e8; font-family: 'Source Sans 3', sans-serif; }
-    @media print { body { background: white !important; color: #000 !important; } .app-header,.bottom-nav,.no-print,.no-print-contrato,.modal-overlay > div > div:first-child { display: none !important; } .contrato-modal-wrap { position: static !important; background: white !important; } .contrato-inner { box-shadow: none !important; border-radius: 0 !important; max-height: none !important; } .contrato-doc { color: #000 !important; } .recibo-imprime { border: none !important; box-shadow: none !important; color: #000 !important; background: white !important; } .recibo-imprime * { color: #000 !important; } }
   </style>
 </head>
 <body>
@@ -651,7 +650,6 @@ const IC = {
   warn:"M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01",
   edit:"M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
   trash:"M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6",
-  gear:"M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
 };
 
 
@@ -743,252 +741,37 @@ const SAN_LORENZO_LOTES = [
 /* ══════════════════════════════════════════════════
    APP ROOT
 ══════════════════════════════════════════════════ */
-
-/* ══════════════════════════════════════════════════
-   SMART PRINT — funciona en móvil y escritorio
-══════════════════════════════════════════════════ */
-function smartPrint(htmlContent, title) {
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile && navigator.share) {
-    // En móvil: crear blob y compartir
-    const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
-      <style>body{font-family:Arial,sans-serif;padding:20px;color:#000;}
-      @media print{body{padding:0;}}</style></head><body>${htmlContent}</body></html>`;
-    const blob = new Blob([fullHtml], {type:"text/html"});
-    const file = new File([blob], `${title}.html`, {type:"text/html"});
-    navigator.share({title, files:[file]}).catch(()=>{
-      // fallback: abrir en nueva pestaña
-      const url = URL.createObjectURL(blob);
-      window.open(url,"_blank");
-    });
-  } else {
-    // En escritorio: ventana nueva con print
-    const pw = window.open("","_blank","width=900,height=700,scrollbars=yes");
-    if(!pw) return alert("Permitir ventanas emergentes para imprimir.");
-    pw.document.write(htmlContent);
-    pw.document.close();
-  }
-}
-
-/* ══════════════════════════════════════════════════
-   CONFIG VIEW
-══════════════════════════════════════════════════ */
-const CFG_KEY = "hn_config";
-function loadConfig(){
-  try{ return JSON.parse(localStorage.getItem(CFG_KEY)||"{}"); }catch{ return {}; }
-}
-function saveConfig(obj){
-  try{ localStorage.setItem(CFG_KEY, JSON.stringify(obj)); }catch{}
-  // Sync to Firebase
-  if(window.FB_READY_FLAG && window._fbDB){
-    window._fbDB.collection("solaresHN").doc("hn_config").set({value:obj,updatedAt:new Date().toISOString()}).catch(()=>{});
-  }
-}
-
-function ConfigView(){
-  const cfg0 = loadConfig();
-  const [vendedorNombre, setVendedorNombre] = useState(cfg0.vendedorNombre||"WILMER FERNANDO MONCADA");
-  const [vendedorDNI,    setVendedorDNI]    = useState(cfg0.vendedorDNI||"0704-1977-00557");
-  const [vendedorTel,    setVendedorTel]    = useState(cfg0.vendedorTel||"+504 9533-2023");
-  const [proyectoNombre, setProyectoNombre] = useState(cfg0.proyectoNombre||"LOTIFICADORA VILLA PANAMERICANA");
-  const [proyectoUbic,   setProyectoUbic]   = useState(cfg0.proyectoUbic||"Aldea Laure Abajo, municipio de San Lorenzo, Departamento de Valle");
-  const [valorVaraDefault, setValorVaraDefault] = useState(cfg0.valorVaraDefault||"1007");
-  const [primaDefault,  setPrimaDefault]    = useState(cfg0.primaDefault||"2000");
-  const [pwdActual,     setPwdActual]       = useState("");
-  const [pwdNueva,      setPwdNueva]        = useState("");
-  const [pwdConfirm,    setPwdConfirm]      = useState("");
-  const [msg,           setMsg]             = useState(null);
-  const [fbStatus,      setFbStatus]        = useState(window._fbOnline?"online":"offline");
-
-  useEffect(()=>{
-    const t=setInterval(()=>setFbStatus(window._fbOnline?"online":"offline"),2000);
-    return()=>clearInterval(t);
-  },[]);
-
-  const showMsg = (txt,ok=true)=>{ setMsg({txt,ok}); setTimeout(()=>setMsg(null),3000); };
-
-  const handleSaveDatos = ()=>{
-    saveConfig({vendedorNombre,vendedorDNI,vendedorTel,proyectoNombre,proyectoUbic,valorVaraDefault,primaDefault});
-    showMsg("✅ Configuración guardada");
-  };
-
-  const handleCambiarPwd = async ()=>{
-    if(!pwdActual) return showMsg("Ingresá la contraseña actual",false);
-    if(pwdNueva.length<4) return showMsg("La nueva contraseña debe tener al menos 4 caracteres",false);
-    if(pwdNueva!==pwdConfirm) return showMsg("Las contraseñas no coinciden",false);
-    const ok = await checkAuth(pwdActual);
-    if(!ok) return showMsg("Contraseña actual incorrecta",false);
-    await setStoredAuth(pwdNueva);
-    setPwdActual(""); setPwdNueva(""); setPwdConfirm("");
-    showMsg("✅ Contraseña cambiada correctamente");
-  };
-
-  const handleForcSync = async ()=>{
-    showMsg("⏳ Sincronizando...");
-    try{
-      const keys=["hn_clientes","hn_lotes","hn_ventas","hn_pagos"];
-      for(const k of keys){
-        const v=localStorage.getItem(k);
-        if(v && window._fbDB){
-          await window._fbDB.collection("solaresHN").doc(k).set({value:JSON.parse(v),updatedAt:new Date().toISOString()});
-        }
-      }
-      showMsg("✅ Sincronización completada");
-    }catch(e){ showMsg("Error: "+e.message,false); }
-  };
-
-  const handleExportBackup = ()=>{
-    const data={
-      clientes:JSON.parse(localStorage.getItem("hn_clientes")||"[]"),
-      lotes:JSON.parse(localStorage.getItem("hn_lotes")||"[]"),
-      ventas:JSON.parse(localStorage.getItem("hn_ventas")||"[]"),
-      pagos:JSON.parse(localStorage.getItem("hn_pagos")||"[]"),
-      config:loadConfig(),
-      exportado:new Date().toISOString()
-    };
-    const a=document.createElement("a");
-    a.href="data:application/json,"+encodeURIComponent(JSON.stringify(data,null,2));
-    a.download=`SolaresHN_backup_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-  };
-
-  const S = {
-    section:{background:"var(--card)",borderRadius:12,padding:16,marginBottom:14,border:"1px solid var(--border)"},
-    sTitle:{fontWeight:700,color:"var(--gold)",marginBottom:12,fontSize:".9rem"},
-    row:{display:"flex",gap:10,marginBottom:10,flexWrap:"wrap"},
-    fg:{display:"flex",flexDirection:"column",gap:4,flex:1,minWidth:140},
-    label:{fontSize:".75rem",color:"var(--muted)"},
-    input:{background:"var(--card2)",border:"1px solid var(--border)",borderRadius:7,padding:"8px 10px",color:"var(--text)",fontSize:".85rem"},
-    btn:{padding:"9px 18px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:".83rem"},
-  };
-
-  return(
-    <div style={{padding:"0 0 80px"}}>
-      <div className="section-title">⚙️ Configuración</div>
-
-      {msg&&<div style={{background:msg.ok?"var(--card)":"#3a1a1a",color:msg.ok?"var(--green)":"var(--red)",borderRadius:8,padding:"10px 14px",marginBottom:12,fontWeight:700}}>{msg.txt}</div>}
-
-      {/* ── Datos del vendedor ── */}
-      <div style={S.section}>
-        <div style={S.sTitle}>👤 Datos del Vendedor</div>
-        <div style={S.row}>
-          <div style={S.fg}><span style={S.label}>Nombre completo</span><input style={S.input} value={vendedorNombre} onChange={e=>setVendedorNombre(e.target.value)}/></div>
-        </div>
-        <div style={S.row}>
-          <div style={S.fg}><span style={S.label}>DNI</span><input style={S.input} value={vendedorDNI} onChange={e=>setVendedorDNI(e.target.value)}/></div>
-          <div style={S.fg}><span style={S.label}>Teléfono</span><input style={S.input} value={vendedorTel} onChange={e=>setVendedorTel(e.target.value)}/></div>
-        </div>
-      </div>
-
-      {/* ── Datos del proyecto ── */}
-      <div style={S.section}>
-        <div style={S.sTitle}>🏘️ Datos del Proyecto</div>
-        <div style={S.row}>
-          <div style={S.fg}><span style={S.label}>Nombre del proyecto</span><input style={S.input} value={proyectoNombre} onChange={e=>setProyectoNombre(e.target.value)}/></div>
-        </div>
-        <div style={S.row}>
-          <div style={S.fg}><span style={S.label}>Ubicación</span><input style={S.input} value={proyectoUbic} onChange={e=>setProyectoUbic(e.target.value)}/></div>
-        </div>
-      </div>
-
-      {/* ── Valores por defecto ── */}
-      <div style={S.section}>
-        <div style={S.sTitle}>📐 Valores por defecto</div>
-        <div style={S.row}>
-          <div style={S.fg}><span style={S.label}>Valor vara² (L.)</span><input type="number" style={S.input} value={valorVaraDefault} onChange={e=>setValorVaraDefault(e.target.value)}/></div>
-          <div style={S.fg}><span style={S.label}>Prima default (L.)</span><input type="number" style={S.input} value={primaDefault} onChange={e=>setPrimaDefault(e.target.value)}/></div>
-        </div>
-      </div>
-
-      <button style={{...S.btn,background:"var(--green)",color:"#0f1a0f",width:"100%",marginBottom:14}} onClick={handleSaveDatos}>
-        💾 Guardar Configuración
-      </button>
-
-      {/* ── Cambiar contraseña ── */}
-      <div style={S.section}>
-        <div style={S.sTitle}>🔐 Cambiar Contraseña</div>
-        <div style={S.row}>
-          <div style={S.fg}><span style={S.label}>Contraseña actual</span><input type="password" style={S.input} value={pwdActual} onChange={e=>setPwdActual(e.target.value)}/></div>
-        </div>
-        <div style={S.row}>
-          <div style={S.fg}><span style={S.label}>Nueva contraseña</span><input type="password" style={S.input} value={pwdNueva} onChange={e=>setPwdNueva(e.target.value)}/></div>
-          <div style={S.fg}><span style={S.label}>Confirmar</span><input type="password" style={S.input} value={pwdConfirm} onChange={e=>setPwdConfirm(e.target.value)}/></div>
-        </div>
-        <button style={{...S.btn,background:"var(--gold)",color:"#0f1a0f"}} onClick={handleCambiarPwd}>🔑 Cambiar Contraseña</button>
-      </div>
-
-      {/* ── Firebase ── */}
-      <div style={S.section}>
-        <div style={S.sTitle}>🔥 Firebase</div>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-          <span style={{background:fbStatus==="online"?"#1a4d1a":"#3a1a1a",color:fbStatus==="online"?"var(--green)":"var(--red)",borderRadius:20,padding:"3px 12px",fontSize:".78rem",fontWeight:700}}>
-            {fbStatus==="online"?"🟢 Conectado":"🔴 Sin conexión"}
-          </span>
-          {fbStatus==="online"&&<span style={{fontSize:".75rem",color:"var(--muted)"}}>Guardado automático activo</span>}
-        </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button style={{...S.btn,background:"var(--card2)",color:"var(--text)",border:"1px solid var(--border)"}} onClick={handleForcSync}>☁️ Forzar Sincronización</button>
-          <button style={{...S.btn,background:"var(--card2)",color:"var(--text)",border:"1px solid var(--border)"}} onClick={handleExportBackup}>💾 Exportar Backup JSON</button>
-        </div>
-      </div>
-
-      {/* ── Info ── */}
-      <div style={{textAlign:"center",fontSize:".72rem",color:"var(--muted)",marginTop:8}}>
-        SolaresHN · Villa Panamericana Lotificadora<br/>
-        Desarrollado para gestión interna
-      </div>
-    </div>
-  );
-}
-
-
-/* ══════════════════════════════════════════════════
-   PRINT OVERLAY — funciona en WebView (APK), móvil y escritorio
-   Muestra el contenido en pantalla completa dentro de la app
-   y llama window.print() que funciona en todos los contextos
-══════════════════════════════════════════════════ */
 function printViaIframe(htmlContent) {
-  // Extraer solo el <body> del HTML para mostrarlo
-  const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  const bodyContent = bodyMatch ? bodyMatch[1] : htmlContent;
-
-  // Extraer estilos del <head>
-  const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
-  const styles = styleMatch ? styleMatch.join('
-') : '';
-
-  // Crear overlay fullscreen
-  const overlay = document.createElement('div');
-  overlay.id = '__print_overlay__';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99999;overflow-y:auto;';
-  overlay.innerHTML = `
-    <div id="__print_toolbar__" style="position:sticky;top:0;background:#1a4d1a;padding:10px 14px;display:flex;gap:10px;align-items:center;z-index:1;">
-      <button onclick="document.getElementById('__print_overlay__').remove()" 
-        style="background:#444;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">
-        ← Cerrar
-      </button>
-      <button onclick="window.print()" 
-        style="background:#c9a84c;color:#0f1a0f;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">
-        🖨 Imprimir / Guardar PDF
-      </button>
-    </div>
-    <div id="__print_content__" style="padding:16px;background:#fff;color:#000;">
-      ${styles}
-      ${bodyContent}
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  // Añadir CSS de impresión solo una vez
-  if(!document.getElementById('__print_style__')){
-    const s=document.createElement('style');
-    s.id='__print_style__';
-    s.innerHTML='@media print{#__print_toolbar__{display:none!important;}#__print_overlay__{position:static!important;overflow:visible!important;}.app-header,.bottom-nav,.no-print{display:none!important;}}';
+  var old = document.getElementById('__po__');
+  if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = '__po__';
+  ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99999;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+  var toolbar = document.createElement('div');
+  toolbar.style.cssText = 'position:sticky;top:0;background:#1a4d1a;padding:10px 14px;display:flex;gap:10px;align-items:center;';
+  var btnClose = document.createElement('button');
+  btnClose.textContent = '← Cerrar';
+  btnClose.style.cssText = 'background:#444;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;';
+  btnClose.onclick = function(){ ov.remove(); };
+  var btnPrint = document.createElement('button');
+  btnPrint.textContent = '🖨 Imprimir / Guardar PDF';
+  btnPrint.style.cssText = 'background:#c9a84c;color:#0f1a0f;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;';
+  btnPrint.onclick = function(){ window.print(); };
+  toolbar.appendChild(btnClose);
+  toolbar.appendChild(btnPrint);
+  var content = document.createElement('div');
+  content.style.cssText = 'padding:16px;background:#fff;color:#000;';
+  content.innerHTML = htmlContent;
+  ov.appendChild(toolbar);
+  ov.appendChild(content);
+  document.body.appendChild(ov);
+  if(!document.getElementById('__ps__')){
+    var s = document.createElement('style');
+    s.id = '__ps__';
+    s.textContent = '@media print{#__po__ div:first-child{display:none!important;}.app-header,.bottom-nav,.no-print{display:none!important;}}';
     document.head.appendChild(s);
   }
 }
-
-// CSS global para imprimir — oculta el overlay toolbar y muestra solo el contenido
-
 
 function FbBadge() {
   const [status, setStatus] = React.useState(window.FB_READY_FLAG ? "offline" : "local");
@@ -1283,7 +1066,6 @@ function App() {
           {tab==="lotes"     && <Lotes     {...props}/>}
           {tab==="ventas"    && <Ventas    {...props}/>}
           {tab==="pagos"     && <PagosView {...props}/>}
-          {tab==="config"    && <ConfigView/>}
         </main>
         <nav className="bottom-nav no-print">
           {[
@@ -1292,7 +1074,6 @@ function App() {
             {id:"lotes",    icon:IC.lote,   label:"Lotes"},
             {id:"ventas",   icon:IC.venta,  label:"Ventas"},
             {id:"pagos",    icon:IC.pago,   label:"Pagos"},
-            {id:"config",   icon:IC.gear,   label:"Config"},
           ].map(({id,icon,label})=>(
             <button key={id} className={`nav-btn${tab===id?" active":""}`} onClick={()=>setTab(id)}>
               <Svg path={icon} size={22}/><span>{label}</span>
@@ -2660,7 +2441,6 @@ function generarReciboWA({cl,lt,venta,pago,pagoIds,pagos,montoRecibo,tp,sp,cuota
 </head><body>
 <div class="stamp">VILLA PANAMERICANA</div>
 <div class="no-print" style="padding:8px;background:#f0f4f0;border-radius:8px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-  <button onclick="window.close()" style="background:#444;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-weight:700;cursor:pointer;font-size:9pt;">← Cerrar</button>
   <button onclick="window.print()" style="background:#c9a84c;border:none;padding:8px 18px;border-radius:7px;font-weight:700;cursor:pointer;font-size:9pt;">🖨 Guardar / Imprimir PDF</button>
   <select id="paperSel" onchange="(function(){var v=document.getElementById('paperSel').value;var sty=document.getElementById('pstyle');var sizes={'A5':'148mm 210mm','A4':'210mm 297mm','Letter':'216mm 279mm','Legal':'216mm 356mm','A3':'297mm 420mm','A6':'105mm 148mm','HalfLetter':'140mm 216mm','Statement':'140mm 216mm'};var margs={'A5':'8mm 10mm 10mm 10mm','A4':'15mm 18mm 18mm 18mm','Letter':'15mm 18mm 18mm 18mm','Legal':'15mm 18mm 18mm 18mm','A3':'15mm 18mm 18mm 18mm','A6':'6mm 8mm 8mm 8mm','HalfLetter':'8mm 10mm 10mm 10mm','Statement':'8mm 10mm 10mm 10mm'};var sz=sizes[v]||'148mm 210mm';var mg=margs[v]||'8mm 10mm 10mm 10mm';var cur=sty.textContent;sty.textContent=cur.replace(/@page\{[^}]*\}/,'@page{size:'+sz+';margin:'+mg+'}');})()" style="border:1px solid #ccc;border-radius:6px;padding:6px 8px;font-size:8.5pt;cursor:pointer;">
     <option value="A5">A5 — Recibo (148×210mm)</option>
@@ -2773,9 +2553,7 @@ function Recibo({recibo,onClose,clientes,lotes,ventas,pagos}){
     <div className="fade-in">
       <div className="no-print" style={{marginBottom:16,display:"flex",gap:10,flexWrap:"wrap"}}>
         <button className="btn btn-outline btn-sm" onClick={onClose}>← Volver</button>
-        <button className="btn btn-gold btn-sm" onClick={()=>{
-          generarReciboWA({cl,lt,venta,pago,pagoIds,pagos,montoRecibo,tp,sp,cuotasPagadas,denomCuotas,reciboNum,esMultiple,telCliente,msgWA});
-        }}>🖨 PDF</button>
+        <button className="btn btn-gold btn-sm" onClick={()=>generarReciboWA({cl,lt,venta,pago,pagoIds,pagos,montoRecibo,tp,sp,cuotasPagadas,denomCuotas,reciboNum,esMultiple,telCliente,msgWA})}>🖨 PDF</button>
         {telCliente&&<button className="btn btn-gold btn-sm" style={{background:"#25d366",color:"#0f1a0f"}} onClick={()=>window.open(`https://wa.me/${telCliente}?text=${encodeURIComponent(msgWA)}`,'_blank')}>📲 WhatsApp</button>}
       </div>
       <div className="recibo-imprime card" style={{borderColor:"var(--gold)",position:"relative",overflow:"visible"}}>
@@ -2928,9 +2706,9 @@ function ContratoModal({venta,cliente,lote,pagos,onClose}){
           <button className="btn btn-outline btn-sm" onClick={onClose}>← Cerrar</button>
           <button className="btn btn-gold btn-sm" onClick={()=>{
             const el=document.querySelector(".contrato-doc");
-            if(!el) return;
+            if(!el){window.print();return;}
             const html=el.innerHTML;
-            const _printHtml=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Contrato SolaresHN</title><style id="cpstyle">
+            const _ct=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Contrato SolaresHN</title><style id="cpstyle">
               @page{size:A4;margin:18mm 20mm 22mm 20mm;}
               *{box-sizing:border-box;}
               body{font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.7;color:#000;margin:0;padding:24px 28px;background:white;position:relative;}
@@ -2971,7 +2749,6 @@ function ContratoModal({venta,cliente,lote,pagos,onClose}){
 
               <div class="contrato-body">
               <div class="no-print-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-  <button onclick="window.close()" style="position:fixed;top:10px;left:10px;background:#444;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;font-size:10pt;z-index:999;">← Cerrar</button>
   <button class="no-print-btn" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
   <select id="cpSel" style="border:1px solid #ccc;border-radius:6px;padding:5px 8px;font-size:9pt;cursor:pointer;" onchange="var v=this.value;var sty=document.getElementById('cpstyle');var sz={'A4':'210mm 297mm','Letter':'216mm 279mm','Legal':'216mm 356mm','A5':'148mm 210mm','A3':'297mm 420mm','A6':'105mm 148mm'}[v]||'210mm 297mm';var mg={'A4':'18mm 20mm 22mm 20mm','Letter':'18mm 20mm 22mm 20mm','Legal':'18mm 20mm 22mm 20mm','A5':'8mm 10mm 10mm 10mm','A3':'20mm 22mm 24mm 22mm','A6':'6mm 8mm 8mm 8mm'}[v]||'18mm 20mm 22mm 20mm';sty.textContent=sty.textContent.replace(/@page\{[^}]*\}/,'@page{size:'+sz+';margin:'+mg+'}');">
     <option value="A4">A4 (210×297mm)</option>
@@ -2985,14 +2762,7 @@ function ContratoModal({venta,cliente,lote,pagos,onClose}){
               ${html}
               </div><!-- end contrato-body -->
             </body></html>`;
-            const pw=window.open("","_blank","width=900,height=700,scrollbars=yes");
-            if(pw){
-              pw.document.write(_printHtml);
-              pw.document.close();
-            } else {
-              // móvil o bloqueado: iframe
-              printViaIframe(_printHtml);
-            }
+            printViaIframe(_ct);
           }}>🖨 Imprimir / Guardar PDF</button>
         </div>
         <style>{estilosContrato}</style>
@@ -3118,7 +2888,6 @@ function ListaPreciosPDF({lotes,onClose}){
             ${tablas}
             <div class='note'>* Total = V² × Valor vara | Subtotal = Total − Prima | Cant. Cuotas = Subtotal ÷ Cuota mensual</div>
             <div class='no-print' style='text-align:center;margin-top:24px;'>
-              <button onclick='window.close()' style='padding:10px 18px;background:#444;color:#fff;border:none;border-radius:6px;font-size:12pt;cursor:pointer;margin-right:8px;'>← Cerrar</button>
               <button onclick='window.print()' style='padding:10px 32px;background:#1a4d1a;color:#fff;border:none;border-radius:6px;font-size:12pt;cursor:pointer;'>🖨 Imprimir / Guardar PDF</button>
             </div>
             </body></html>`);
