@@ -1,7 +1,6 @@
 {
   "name": "SolaresHN",
   "short_name": "SolaresHN",
-  "description": "Control de Lotes y Ventas Honduras",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f1a0f",
@@ -9,15 +8,14 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://appparawilmer.vercel.app/logo-192.png",
+      "src": "https://img.icons8.com/color/192/home.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://appparawilmer.vercel.app/logo-512.png",
+      "src": "https://img.icons8.com/color/512/home.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ]
-
 }
