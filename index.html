@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Index - Contratos y Recibos (Sin Backend)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <style>
+    :root{
+      --bg: #0f1a0f;
+      --surface: #141f14;
+      --card: #1c281c;
+      --card2: #213021;
+      --text: #e8e8e8;
+      --muted: #6b8a6b;
+      --gold: #c9a84c;
+      --green: #52c47a;
+      --red: #e05252;
+      --shadow: 0 6px 20px rgba(0,0,0,.25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background: var(--bg);
+      color: var(--text);
+      padding: 0 12px;
+    }
+    header { padding: 14px 0; text-align: center; }
+    h1 { font-size: 1.2rem; margin: 8px 0; }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+
+    /* Tabs y layout */
+    .tabs { display: flex; gap: 6px; justify-content: center; margin: 12px 0; }
+    .tab {
+      padding: 8px 12px; border-radius: 8px; cursor: pointer;
+      border: 1px solid #2e4a2e; background: #1b351b; color: #e8e8e8; font-weight: 700;
+    }
+    .tab.active { background: var(--gold); color: #0f1a0f; border-color: #c9a84c; }
+
+    /* Panels */
+    .panel { display: none; padding: 12px 0; }
+    .panel.active { display: block; }
+
+    /* Cards y secciones */
+    .card { background: var(--card); border: 1px solid #2e4a2e; border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+    .section-title { font-weight: 700; color: var(--gold); margin: 12px 0 8px; font-size: .95rem; text-transform: uppercase; }
+
+    /* Formulario */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    label { font-size: .8rem; color: var(--muted); }
+    input, textarea, select {
+      width: 100%; padding: 8px 10px; border-radius: 6px;
+      border: 1px solid #2e4a2e; background: #1a2b1a; color: #e8e8e8;
+      font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+
+    /* Firma (canvas) */
+    .signature { border: 1px solid #2e4a2e; background: #fff; width: 100%; height: 180px; border-radius: 6px; display: block; }
+    .sig-controls { display:flex; gap:8px; margin-top: 6px; }
+
+    /* Marca de agua en recibos */
+    .watermark {
+      position: absolute;
+      z-index: 0;
+      width: 60%;
+      opacity: .15;
+      text-align: center;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) rotate(-25deg);
+      pointer-events: none;
+      font-size: 50px;
+      color: #fff;
+      user-select:none;
+      font-weight: bold;
+    }
+
+    /* Recibos y contratos imprimibles */
+    @media print {
+      .watermark { display: block; }
+      .no-print { display: none; }
+    }
+
+    /* Botones genéricos */
+    .btn { padding: 8px 12px; border-radius: 6px; border: 1px solid #2e4a2e; background: #c9a84c; color: #0f1a0f; font-weight: 700; cursor: pointer; }
+    .btn.secondary { background: #1c2b1c; border-color: #2e4a2e; color: #e8e8e8; }
+    .btn.danger { background: #2e0f0f; color: #fff; border-color: #7a2f2f; }
+
+    /* Listas y tablas simples */
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #2e4a2e; padding: 6px 8px; text-align: left; }
+    th { background: #1a4d1a; color: #fff; font-size: .78rem; }
+
+    /* Simple footer */
+    footer { text-align: center; padding: 14px 0; color: #6b8a6b; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div style="font-size:0.9rem;color:#c9a84c;font-weight:700">SolaresHN - Contratos y Recibos</div>
+      <h1>Gestión 100% frontend</h1>
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs" aria-label="Navegación">
+      <button class="tab active" data-panel="contratos">Contratos</button>
+      <button class="tab" data-panel="recibos">Recibos</button>
+    </div>
+
+    <!-- Panels -->
+    <section id="contratos" class="panel active">
+      <div class="card">
+        <div class="section-title">Nuevo Contrato</div>
+        <div id="contratoForm">
+          <div class="form-row">
+            <div>
+              <label>Cliente</label>
+              <select id="selCliente" style="margin-top:4px;">
+                <option value="">— Nuevo/Seleccionar —</option>
+              </select>
+            </div>
+            <div>
+              <label>Número de Contrato</label>
+              <input type="number" id="numContrato" placeholder="Auto (se genera al guardar)" />
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:8px;">
+            <div>
+              <label>Teléfono Personal</label>
+              <input id="cliente_telPersonal" placeholder="Teléfono personal" />
+            </div>
+            <div>
+              <label>Teléfono Referencia</label>
+              <input id="cliente_telReferencia" placeholder="Teléfono de referencia" />
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:8px;">
+            <div>
+              <label>Parentesco</label>
+              <input id="cliente_parentesco" placeholder="Parentesco" />
+            </div>
+            <div>
+              <label>Nombre Cliente</label>
+              <input id="cliente_nombre" placeholder="Nombre completo" />
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:8px;">
+            <div>
+              <label>DNI/NIT</label>
+              <input id="cliente_dni" placeholder="DNI" />
+            </div>
+            <div>
+              <label>Dirección</label>
+              <input id="cliente_direccion" placeholder="Dirección" />
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:12px;">Datos del Contrato</div>
+
+          <div class="form-row" style="margin-top:6px;">
+            <div>
+              <label>Lote (texto)</label>
+              <input id="contrato_lote" placeholder="Ej: Lote 12, Bloque A" />
+            </div>
+            <div>
+              <label>Proyecto</label>
+              <input id="contrato_proyecto" placeholder="Proyecto" value="Villa Panamericana Lotificadora" />
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:8px;">
+            <div>
+              <label>Precio Total (L.)</label>
+              <input id="contrato_precio" placeholder="0" type="number" />
+            </div>
+            <div>
+              <label>Prima / Enganche (L.)</label>
+              <input id="contrato_prima" placeholder="0" type="number" />
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:8px;">
+            <div>
+              <label>N° Cuotas</label>
+              <input id="contrato_numCuotas" placeholder="12" type="number" />
+            </div>
+            <div>
+              <label>Fecha Inicio</label>
+              <input id="contrato_fechaInicio" type="date" />
+            </div>
+          </div>
+
+          <div style="margin-top:8px;">
+            <label>Notas</label>
+            <textarea id="contrato_notas" placeholder="Notas del contrato"></textarea>
+          </div>
+
+          <div style="margin-top:8px;">
+            <label>Firma Contract</label>
+            <canvas id="canvasContrato" class="signature" width="900" height="180"></canvas>
+            <div class="sig-controls">
+              <button class="btn" id="limpiarContrato">Limpiar firma</button>
+              <button class="btn" id="imprimirContrato">Imprimir contrato</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <button class="btn" id="guardarContrato">Guardar Contrato</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="contratosLista">
+        <div class="section-title">Contratos existentes</div>
+        <table id="tblContratos">
+          <thead>
+            <tr><th>Nº</th><th>Cliente</th><th>Lote</th><th>Precio</th><th>Cuotas</th><th>Acciones</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="recibos" class="panel" aria-label="Recibos">
+      <div class="card">
+        <div class="section-title">Nuevo Recibo</div>
+
+        <div class="form-row" style="margin-top:6px;">
+          <div>
+            <label>Contrato</label>
+            <select id="selContratoRecibo">
+              <option value="">— Seleccionar contrato —</option>
+            </select>
+          </div>
+          <div>
+            <label>Tipo de pago</label>
+            <select id="recibo_tipo">
+              <option value="cuota">Cuota</option>
+              <option value="prima">Prima</option>
+              <option value="adelanto">Adelanto</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top:6px;">
+          <div>
+            <label>Monto</label>
+            <input id="recibo_monto" placeholder="Monto" type="number" />
+          </div>
+          <div>
+            <label>Fecha</label>
+            <input id="recibo_fecha" type="date" />
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <label>Nota</label>
+          <input id="recibo_nota" placeholder="Notas" />
+        </div>
+
+        <div style="margin-top:8px;">
+          <label>Firma Recibo</label>
+          <canvas id="canvasRecibo" class="signature" width="900" height="180"></canvas>
+          <div class="sig-controls">
+            <button class="btn" id="limpiarRecibo">Limpiar firma</button>
+            <button class="btn" id="imprimirRecibo">Imprimir recibo</button>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <button class="btn" id="guardarRecibo">Guardar Recibo</button>
+        </div>
+      </div>
+
+      <div class="card" id="recibosLista">
+        <div class="section-title">Recibos registrados</div>
+        <table id="tblRecibos">
+          <thead><tr><th>Nº</th><th>Contrato</th><th>Cliente</th><th>Pago</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>Este índice es 100% frontend y se guarda en tu navegador (localStorage). Puedes imprimir o guardar como PDF desde las opciones de impresión.</footer>
+  </div>
+
+  <script>
+    // Almacenamiento básico en memoria + localStorage
+    const STORAGE_KEY = "index-contratos-recibos";
+    let store = { clients: [], contracts: [], receipts: [] };
+
+    // Cargar desde localStorage si existe
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) store = JSON.parse(raw);
+      } catch { /* ignore */ }
+    }
+    function saveStore() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    // Utiles
+    function nextContractNumber() {
+      const nums = store.contracts.map(c => Number(c.number||0)).filter(n => !!n);
+      const max = nums.length ? Math.max(...nums) : 0;
+      return (max + 1);
+    }
+    function fmt(n){ return Number(n||0).toLocaleString("es-HN",{minimumFractionDigits:0, maximumFractionDigits:0}); }
+
+    // Firma en canvases
+    function initSignature(canvas){
+      const ctx = canvas.getContext("2d");
+      let drawing = false;
+      const rect = canvas.getBoundingClientRect();
+
+      function getPos(e){
+        const r = canvas.getBoundingClientRect();
+        const x = (e.clientX - r.left) * (canvas.width / r.width);
+        const y = (e.clientY - r.top) * (canvas.height / r.height);
+        return {x, y};
+      }
+
+      function start(e){ drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+      function move(e){
+        if (!drawing) return;
+        const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.stroke();
+        e.preventDefault();
+      }
+      function end(e){ drawing = false; ctx.closePath(); e.preventDefault(); }
+
+      canvas.addEventListener("mousedown", start);
+      canvas.addEventListener("mousemove", move);
+      canvas.addEventListener("mouseup", end);
+      canvas.addEventListener("mouseleave", end);
+
+      // touch
+      canvas.addEventListener("touchstart", (e)=>{ const t = e.touches[0]; if(!t) return; start({clientX:t.clientX, clientY:t.clientY, preventDefault(){e.preventDefault();}}); }, {passive:false});
+      canvas.addEventListener("touchmove", (e)=>{ const t = e.touches[0]; if(!t) return; move({clientX:t.clientX, clientY:t.clientY, preventDefault(){e.preventDefault();}}); }, {passive:false});
+      canvas.addEventListener("touchend", (e)=>{ end({preventDefault(){e.preventDefault();}}); }, {passive:false});
+      return canvas;
+    }
+    function clearCanvas(canvas){
+      const ctx = canvas.getContext("2d"); ctx.clearRect(0,0,canvas.width,canvas.height);
+    }
+
+    // Inicio - cargar datos base si no hay nada
+    function ensureInitialData() {
+      if (store.contracts.length === 0 && store.clients.length === 0) {
+        // Crear un par de datos de ejemplo (opcional)
+        const c1 = { id: "c1", number: 1, name: "Cliente Ejemplo 1", dni: "12345678", telPersonal: "", telReferencia: "", parentesco: "", direccion: "Ciudad", proyecto: "Villa Panamericana", lote: "Lote 1", precio: 100000, prima: 2000, numCuotas: 12, fechaInicio: new Date().toISOString().slice(0,10), firmaContrato: "" };
+        store.clients.push({ id: c1.id, nombre: c1.name, dni: c1.dni, telPersonal: "", telReferencia: "", parentesco: "", direccion: c1.direccion });
+        store.contracts.push({ id: "vc1", number: 1, clientId: c1.id, lote: c1.lote, proyecto: c1.proyecto, precio: c1.precio, prima: c1.prima, numCuotas: c1.numCuotas, fechaInicio: c1.fechaInicio, firma: "" });
+        saveStore();
+      }
+    }
+
+    // Render de la lista de contratos
+    function renderContratos() {
+      const tbody = document.querySelector("#tblContratos tbody");
+      tbody.innerHTML = "";
+      store.contracts.forEach((c, idx) => {
+        const cli = store.clients.find(cl => cl.id === c.clientId) || {};
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${c.number}</td>
+          <td>${cli.nombre||"—"}</td>
+          <td>${c.lote||""}</td>
+          <td>${fmt(c.precio)}</td>
+          <td>${c.numCuotas}</td>
+          <td>
+            <button class="btn" data-action="ver" data-id="${c.id}">Ver</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      // eventos
+      tbody.querySelectorAll("button[data-action='ver']").forEach(b=>{
+        b.addEventListener("click", (ev)=>{
+          const id = ev.currentTarget.getAttribute("data-id");
+          verContrato(id);
+        });
+      });
+    }
+
+    // Ver/Imprimir contrato
+    function verContrato(id){
+      const contrato = store.contracts.find(x => x.id === id);
+      if(!contrato) return alert("Contrato no encontrado");
+      const cli = store.clients.find(c=>c.id===contrato.clientId) || {};
+      const html = `
+        <html><head><title>Contrato - ${contrato.number}</title><style>
+          body{font-family: Georgia, 'Times New Roman', serif; padding:20px; color:#000}
+          h2{ text-align:center; }
+          .section{ margin: 12px 0; }
+          .firma-area{ border-bottom:1px solid #000; height:120px; margin-top:10px; }
+        </style></head><body>
+        <h2>Contrato Privado de Promesa de Compra Venta</h2>
+        <div class="section"><strong>Cliente:</strong> ${cli.nombre||""} | <strong>DNI:</strong> ${cli.dni||""} | <strong>Tel:</strong> ${cli.telPersonal||""}</div>
+        <div class="section"><strong>Lote:</strong> ${contrato.lote} | <strong>Proyecto:</strong> ${contrato.proyecto}</div>
+        <div class="section"><strong>Precio:</strong> L. ${fmt(contrato.precio)}</div>
+        <div class="section"><strong>Cuotas:</strong> ${contrato.numCuotas} x L. ${fmt( (contrato.precio/contrato.numCuotas).toFixed(0) )}</div>
+        <div class="section firma-area" id="firmaContrato">Firma Contract</div>
+        <div class="section" style="text-align:right;margin-top:20px;">
+          <button onclick="window.print()">Imprimir</button>
+        </div>
+        <script>
+          // firma guardada en dataURL si existiera
+        </script>
+        </body></html>
+      `;
+      const w = window.open("", "_blank");
+      w.document.write(html);
+      w.document.close();
+      // No fuerza firma aquí; se puede usar el canvas de la página para firmar y luego exportar a PDF
+    }
+
+    // Firma contrato (canvas)
+    function setupContractSignature(){
+      const c = document.getElementById("canvasContrato");
+      initSignature(c);
+      document.getElementById("limpiarContrato").addEventListener("click", ()=>clearCanvas(c));
+      document.getElementById("guardarContrato").addEventListener("click", ()=>{
+        const dataURL = c.toDataURL("image/png");
+        // guardarlo en store como firma del último contrato si hay
+        if (store.contracts.length){
+          store.contracts[store.contracts.length-1].firma = dataURL;
+          store.contracts[store.contracts.length-1].firmaPresent = true;
+          saveStore();
+          alert("Firma guardada en el contrato actual.");
+          renderContratos();
+        } else {
+          alert("Guarda al menos un contrato antes de firmar.");
+        }
+      });
+      // cargar firma existente
+      if (store.contracts.length){
+        const f = store.contracts[store.contracts.length-1].firma;
+        if (f) {
+          const img = new Image();
+          img.onload = ()=> {
+            c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          };
+          img.src = f;
+        }
+      }
+    }
+
+    // Firma recibo
+    function setupReceiptSignature(){
+      const c = document.getElementById("canvasRecibo");
+      initSignature(c);
+      document.getElementById("limpiarRecibo").addEventListener("click", ()=>clearCanvas(c));
+      document.getElementById("imprimirRecibo").addEventListener("click", ()=> {
+        const dataURL = c.toDataURL("image/png");
+        // guardar firma en recibo si existe
+        if (store.receipts.length){
+          store.receipts[store.receipts.length-1].firma = dataURL;
+          store.receipts[store.receipts.length-1].firmaPresent = true;
+          saveStore();
+        }
+        window.print();
+      });
+    }
+
+    // Inicialización de pestañas
+    function initTabs(){
+      document.querySelectorAll(".tab").forEach(btn=>{
+        btn.addEventListener("click", (e)=>{
+          const panel = btn.getAttribute("data-panel");
+          document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+          document.getElementById(panel).classList.add("active");
+          document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+          btn.classList.add("active");
+        });
+      });
+    }
+
+    // Listas de clientes/contratos
+    function initDropdowns(){
+      const selCliente = document.getElementById("selCliente");
+      selCliente.innerHTML = `<option value="">— Nuevo/Seleccionar —</option>`;
+      store.clients.forEach((cl)=> {
+        const opt = document.createElement("option");
+        opt.value = cl.id;
+        opt.textContent = cl.nombre;
+        selCliente.appendChild(opt);
+      });
+
+      // Recibo: contratos
+      const selContratoRecibo = document.getElementById("selContratoRecibo");
+      selContratoRecibo.innerHTML = `<option value="">— Seleccionar contrato —</option>`;
+      store.contracts.forEach((co)=> {
+        const cli = store.clients.find(c=>c.id===co.clientId) || {};
+        const opt = document.createElement("option");
+        opt.value = co.id;
+        opt.textContent = `Contrato ${co.number} - ${cli.nombre||""}`;
+        selContratoRecibo.appendChild(opt);
+      });
+    }
+
+    // Guardar contrato
+    function onGuardarContrato(){
+      const clientId = document.getElementById("selCliente").value;
+      const nombreCliente = document.getElementById("cliente_nombre").value || "";
+      const telPersonal = document.getElementById("cliente_telPersonal").value || "";
+      const telReferencia = document.getElementById("cliente_telReferencia").value || "";
+      const parentesco = document.getElementById("cliente_parentesco").value || "";
+      const dni = document.getElementById("cliente_dni").value || "";
+      const direccion = document.getElementById("cliente_direccion").value || "";
+      // Crear cliente si no existe
+      let cid = clientId;
+      if (!cid){
+        cid = "cli_"+Date.now();
+        const newClient = { id: cid, nombre: nombreCliente, dni, telPersonal, telReferencia, parentesco, direccion };
+        store.clients.push(newClient);
+      }
+      // contrato
+      const lote = document.getElementById("contrato_lote").value || "";
+      const proyecto = document.getElementById("contrato_proyecto").value || "Villa Panamericana";
+      const precio = Number(document.getElementById("contrato_precio").value || 0);
+      const prima = Number(document.getElementById("contrato_prima").value || 0);
+      const numCuotas = Number(document.getElementById("contrato_numCuotas").value || 0);
+      const fechaInicio = document.getElementById("contrato_fechaInicio").value || new Date().toISOString().slice(0,10);
+      const notas = document.getElementById("contrato_notas").value || "";
+
+      const number = nextContractNumber();
+      const contrato = {
+        id: 'cn_'+Date.now(),
+        number,
+        clientId: cid,
+        lote, proyecto, precio, prima, numCuotas, fechaInicio, notas,
+        firma: "", firmaPresent: false
+      };
+      store.contracts.push(contrato);
+
+      // firma inicial (opcional) ya dibujada en canvasContrato
+      // Guardar firmas si ya se dibujó
+      const c = document.getElementById("canvasContrato");
+      if (c) {
+        const dataURL = c.toDataURL("image/png");
+        contrato.firma = dataURL;
+        contrato.firmaPresent = true;
+      }
+
+      saveStore();
+      renderContratos();
+      initDropdowns();
+      alert("Contrato guardado. Número: " + number);
+    }
+
+    // Guardar recibo
+    function onGuardarRecibo(){
+      const contratoId = document.getElementById("selContratoRecibo").value;
+      const contrato = store.contracts.find(x=>x.id===contratoId);
+      if(!contrato){ alert("Selecciona un contrato primero"); return; }
+
+      const tipo = document.getElementById("recibo_tipo").value;
+      const monto = Number(document.getElementById("recibo_monto").value || 0);
+      const fecha = document.getElementById("recibo_fecha").value || new Date().toISOString().slice(0,10);
+      const nota = document.getElementById("recibo_nota").value || "";
+
+      if(!monto){ alert("Ingresa un monto"); return; }
+
+      const recibo = {
+        id: 'rc_'+Date.now(),
+        contratoId,
+        tipo, monto, fecha, nota,
+        firma: "", firmaPresent: false
+      };
+      store.receipts.push(recibo);
+
+      // firma del recibo
+      const c = document.getElementById("canvasRecibo");
+      if (c) recibo.firma = c.toDataURL("image/png");
+
+      saveStore();
+      renderRecibos();
+      alert("Recibo guardado.");
+    }
+
+    // Render recibos
+    function renderRecibos(){
+      const tbody = document.querySelector("#tblRecibos tbody");
+      tbody.innerHTML = "";
+      store.receipts.forEach((r, idx)=>{
+        const co = store.contracts.find(c=>c.id===r.contratoId) || {};
+        const cli = store.clients.find(cl=>cl.id===co.clientId) || {};
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx+1}</td>
+          <td>${co.number||''}</td>
+          <td>${cli.nombre||''}</td>
+          <td>${r.monto}</td>
+          <td>${r.fecha}</td>
+          <td>
+            <button class="btn" data-action="ver" data-id="${r.id}">Ver</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll("button[data-action='ver']").forEach(btn=>{
+        btn.addEventListener("click", (ev)=>{
+          const id = ev.currentTarget.getAttribute("data-id");
+          verRecibo(id);
+        });
+      });
+    }
+
+    // Ver/Imprimir recibo
+    function verRecibo(id){
+      const r = store.receipts.find(x=>x.id===id);
+      if(!r) return alert("Recibo no encontrado");
+      const co = store.contracts.find(c=>c.id===r.contratoId) || {};
+      const cli = store.clients.find(cl=>cl.id===co.clientId) || {};
+      const html = `
+        <html><head><title>Recibo - ${id}</title><style>
+          body{font-family: Arial, sans-serif; padding:20px; color:#000;}
+          .watermark{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-25deg); opacity:.15; font-size:60px; color:#000;}
+          .row{ display:flex; justify-content:space-between; margin:6px 0; }
+          .sig{ border:1px solid #2e4a2e; height:160px; }
+          @media print { .no-print{ display:none; } }
+        </style></head><body>
+        <div class="watermark">CONTRATO - RECIBO</div>
+        <h2 style="text-align:center;">RECIBO DE PAGO</h2>
+        <div class="row"><span>Cliente:</span><span>${cli.nombre||''}</span></div>
+        <div class="row"><span>Contrato Nº:</span><span>${co.number||''}</span></div>
+        <div class="row"><span>Monto:</span><span>${r.monto}</span></div>
+        <div class="row"><span>Fecha:</span><span>${r.fecha}</span></div>
+        <div class="row"><span>Tipo:</span><span>${r.tipo}</span></div>
+        <div style="margin-top:8px;">
+          <div>Firma:</div>
+          <canvas class="sig" id="reciboPrintSig" width="880" height="180"></canvas>
+        </div>
+        <div style="text-align:center;margin-top:12px;">
+          <button onclick="window.print()">Imprimir</button>
+        </div>
+        </body></html>
+      `;
+      const w = window.open("", "_blank");
+      w.document.write(html);
+      w.document.close();
+      // cargar firma si existe
+      w.onload = function(){
+        const canv = w.document.getElementById("reciboPrintSig");
+        const url = r.firma;
+        if(url){
+          const img = new Image();
+          img.onload = function(){ const ctx = canv.getContext('2d'); ctx.drawImage(img,0,0,canv.width,canv.height); };
+          img.src = url;
+        }
+      };
+    }
+
+    // Eventos de firma contrat
+    function bindContratoCanvas(){
+      const canvas = document.getElementById("canvasContrato");
+      if (canvas){
+        initSignature(canvas);
+        document.getElementById("limpiarContrato").addEventListener("click", ()=>clearCanvas(canvas));
+      }
+    }
+    function bindReciboCanvas(){
+      const canvas = document.getElementById("canvasRecibo");
+      if (canvas){
+        initSignature(canvas);
+        document.getElementById("limpiarRecibo").addEventListener("click", ()=>clearCanvas(canvas));
+      }
+    }
+
+    // Enlaces de impresión para contrato
+    function setupImprimirContrato(){
+      document.getElementById("imprimirContrato").addEventListener("click", ()=>{
+        // Generar una versión imprimible básica
+        const contrato = store.contracts[store.contracts.length-1];
+        const cli = store.clients.find(c=>c.id===contrato.clientId) || {};
+        const html = `
+          <html><head><title>Contrato imprimible</title><style>
+            body{ font-family: Times New Roman, serif; padding:20px; }
+            h2{ text-align:center; }
+            .line{ border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:6px; }
+          </style></head><body>
+          <h2>Contrato - #${contrato.number}</h2>
+          <div class="line">Cliente: ${cli.nombre||''}</div>
+          <div class="line">Lote: ${contrato.lote} - Proyecto: ${contrato.proyecto}</div>
+          <div class="line">Precio: L. ${fmt(contrato.precio)}</div>
+          <div class="line">Firma:</div>
+          <img src="${store.contracts[store.contracts.length-1].firma||''}" alt="firma" style="max-width:400px; display:block; margin:10px auto;">
+          <div style="text-align:right; margin-top:20px;">Firma Autorizada</div>
+          </body></html>
+        `;
+        const w = window.open("", "_blank");
+        w.document.write(html);
+        w.document.close();
+        w.onload = ()=> w.focus();
+      });
+    }
+
+    // Inicial
+    function bootstrap(){
+      loadStore();
+      ensureInitialData();
+      renderContratos();
+      renderRecibos();
+      initTabs();
+      initDropdowns();
+
+      // Firma contrato/recibo
+      setupContractSignature();
+      setupReceiptSignature();
+      // impresiones
+      setupImprimirContrato();
+      // eventos
+      document.getElementById("guardarContrato").addEventListener("click", onGuardarContrato);
+      document.getElementById("guardarRecibo").addEventListener("click", onGuardarRecibo);
+    }
+
+    // Inicializar
+    window.addEventListener("DOMContentLoaded", bootstrap);
+  </script>
+
+</body>
+</html>
